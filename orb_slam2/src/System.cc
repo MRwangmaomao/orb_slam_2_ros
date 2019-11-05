@@ -28,17 +28,25 @@
 namespace ORB_SLAM2
 {
 
+/**
+ * @brief Construct a new System:: System object
+ * 
+ * @param strVocFile 词典路径
+ * @param strSettingsFile 相机配置yaml文件路径
+ * @param sensor 传感器类型
+ * @param map_file 地图文件路径
+ * @param load_map 是否加载地图
+ */
 System::System(const string strVocFile, const string strSettingsFile, const eSensor sensor,
                const std::string & map_file, bool load_map): // map serialization addition
                mSensor(sensor), mbReset(false),mbActivateLocalizationMode(false), mbDeactivateLocalizationMode(false),
                map_file(map_file), load_map(load_map)
 {
     // Output welcome message
-    cout << endl <<
-    "ORB-SLAM2 Copyright (C) 2014-2016 Raul Mur-Artal, University of Zaragoza." << endl <<
-    "This program comes with ABSOLUTELY NO WARRANTY;" << endl  <<
-    "This is free software, and you are welcome to redistribute it" << endl <<
-    "under certain conditions. See LICENSE.txt." << endl << endl;
+    cout << endl << 
+    "Hello!!!" << endl << 
+    "This is THU robot project. " << endl <<
+    "Some code is from the ORBSLAM2. " << endl << endl;
 
     cout << "Input sensor was set to: ";
 
@@ -66,7 +74,7 @@ System::System(const string strVocFile, const string strSettingsFile, const eSen
     //try to load from the binary file
     bool bVocLoad = mpVocabulary->loadFromBinFile(strVocFile+".bin");
 
-    if(!bVocLoad)
+    if(!bVocLoad) // 未成功加载词典
     {
         cerr << "Cannot find binary file for vocabulary. " << endl;
         cerr << "Failed to open at: " << strVocFile+".bin" << endl;
@@ -91,7 +99,7 @@ System::System(const string strVocFile, const string strSettingsFile, const eSen
     }
     else {
         //Create KeyFrame Database
-        mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);
+        mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary); // 关键帧数据库
         //Create the Map
         mpMap = new Map();
     }
@@ -123,7 +131,7 @@ System::System(const string strVocFile, const string strSettingsFile, const eSen
     mpLoopCloser->SetTracker(mpTracker);
     mpLoopCloser->SetLocalMapper(mpLocalMapper);
 
-    currently_localizing_only_ = false;
+    currently_localizing_only_ = false; // 非纯定位模式
 }
 
 void System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp)
@@ -325,7 +333,7 @@ void System::SaveTrajectoryTUM(const string &filename)
 
     // Transform all keyframes so that the first keyframe is at the origin.
     // After a loop closure the first keyframe might not be at the origin.
-    cv::Mat Two = vpKFs[0]->GetPoseInverse();
+    cv::Mat Two = vpKFs[0]->GetPoseInverse(); // 原点关键帧 位于原点
 
     ofstream f;
     f.open(filename.c_str());
@@ -377,28 +385,29 @@ void System::SaveKeyFrameTrajectoryTUM(const string &filename)
     cout << endl << "Saving keyframe trajectory to " << filename << " ..." << endl;
 
     vector<KeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
-    sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
+    sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);// 按照ID排序
 
     // Transform all keyframes so that the first keyframe is at the origin.
     // After a loop closure the first keyframe might not be at the origin.
     //cv::Mat Two = vpKFs[0]->GetPoseInverse();
 
-    ofstream f;
-    f.open(filename.c_str());
-    f << fixed;
+    ofstream f; 
+    f.open(filename.c_str()); // 打开文件
+    f << fixed; 
 
-    for(size_t i=0; i<vpKFs.size(); i++)
+    for(size_t i=0; i<vpKFs.size(); i++) // 关键帧大小
     {
-        KeyFrame* pKF = vpKFs[i];
+        KeyFrame* pKF = vpKFs[i]; // 关键帧指针
 
        // pKF->SetPose(pKF->GetPose()*Two);
 
-        if(pKF->isBad())
+        if(pKF->isBad()) 
             continue;
 
         cv::Mat R = pKF->GetRotation().t();
         vector<float> q = Converter::toQuaternion(R);
         cv::Mat t = pKF->GetCameraCenter();
+        // 时间戳 x y z q0 q1 q2 q3
         f << setprecision(6) << pKF->mTimeStamp << setprecision(7) << " " << t.at<float>(0) << " " << t.at<float>(1) << " " << t.at<float>(2)
           << " " << q[0] << " " << q[1] << " " << q[2] << " " << q[3] << endl;
 
@@ -446,7 +455,7 @@ void System::SaveTrajectoryKITTI(const string &filename)
         {
           //  cout << "bad parent" << endl;
             Trw = Trw*pKF->mTcp;
-            pKF = pKF->GetParent();
+            pKF = pKF->GetParent(); // 获取父亲节点？
         }
 
         Trw = Trw*pKF->GetPose()*Two;
@@ -539,14 +548,21 @@ rlim_t System::GetCurrentCallStackSize () {
     return rlimit.rlim_cur;
 }
 
-
-void System::ActivateLocalizationMode()
+/**
+ * @brief 进入纯定位模式
+ * 
+ */
+void System::ActivateLocalizationMode() 
 {
     currently_localizing_only_ = true;
     unique_lock<mutex> lock(mMutexMode);
     mbActivateLocalizationMode = true;
 }
 
+/**
+ * @brief 关闭纯定位模式
+ * 
+ */
 void System::DeactivateLocalizationMode()
 {
     currently_localizing_only_ = false;
@@ -554,6 +570,11 @@ void System::DeactivateLocalizationMode()
     mbDeactivateLocalizationMode = true;
 }
 
+/**
+ * @brief 使能局部定位
+ * 
+ * @param localize_only 
+ */
 void System::EnableLocalizationOnly (bool localize_only) {
   if (localize_only != currently_localizing_only_) {
     currently_localizing_only_ = localize_only;
@@ -569,6 +590,13 @@ void System::EnableLocalizationOnly (bool localize_only) {
 
 
 // map serialization addition
+/**
+ * @brief add map struct
+ * 
+ * @param filename 
+ * @return true 
+ * @return false 
+ */
 bool System::SaveMap(const string &filename) {
     unique_lock<mutex>MapPointGlobal(MapPoint::mGlobalMutex);
     std::ofstream out(filename, std::ios_base::binary);
@@ -605,6 +633,13 @@ bool System::SaveMap(const string &filename) {
     return true;
 }
 
+/**
+ * @brief 
+ * 
+ * @param filename 
+ * @return true 
+ * @return false 
+ */
 bool System::LoadMap(const string &filename) {
     
     unique_lock<mutex>MapPointGlobal(MapPoint::mGlobalMutex);

@@ -1,6 +1,5 @@
 <launch>
-  <node name="orb_slam2_stereo" pkg="orb_slam2_ros"
-      type="orb_slam2_ros_stereo" output="screen">
+  <node name="orb_slam2_stereo" pkg="orb_slam2_ros" type="orb_slam2_ros_stereo" output="screen">
 
        <remap from="image_left/image_color_rect" to="/mynteye/left/image_mono" />
        <remap from="image_right/image_color_rect" to="/mynteye/right/image_mono" />

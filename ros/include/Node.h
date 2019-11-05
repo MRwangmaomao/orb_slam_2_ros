@@ -32,7 +32,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <orb_slam2_ros/dynamic_reconfigureConfig.h>
 
-#include "orb_slam2_ros/SaveMap.h"
+#include "orb_slam2_ros/SaveMap.h" // srv中的SaveMap自动生成的节点
 
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
@@ -41,7 +41,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PoseStamped.h>
 
-#include "System.h"
+#include "System.h" // ORBSLAM 头文件
 
 
 
@@ -53,7 +53,7 @@ class Node
 
   protected:
     void Update ();
-    ORB_SLAM2::System* orb_slam_;
+    ORB_SLAM2::System* orb_slam_; // 定义ORBSLAM系统
 
     ros::Time current_frame_time_;
 
@@ -91,3 +91,4 @@ class Node
 };
 
 #endif //ORBSLAM2_ROS_NODE_H_
+

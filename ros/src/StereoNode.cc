@@ -14,7 +14,7 @@ int main(int argc, char **argv)
     }
 
     ros::NodeHandle node_handle;
-    image_transport::ImageTransport image_transport (node_handle);
+    image_transport::ImageTransport image_transport (node_handle); // 图像传输节点管理
 
     // initilaize
     StereoNode node (ORB_SLAM2::System::STEREO, node_handle, image_transport);
@@ -25,12 +25,12 @@ int main(int argc, char **argv)
 }
 
 
-StereoNode::StereoNode (const ORB_SLAM2::System::eSensor sensor, ros::NodeHandle &node_handle, image_transport::ImageTransport &image_transport) : Node (sensor, node_handle, image_transport) {
+StereoNode::StereoNode (const ORB_SLAM2::System::eSensor sensor, ros::NodeHandle &node_handle, image_transport::ImageTransport &image_transport) : Node (sensor, node_handle, image_transport) {// 定义Node对象
     left_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (node_handle, "image_left/image_color_rect", 1);
     right_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (node_handle, "image_right/image_color_rect", 1);
 
-    sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(10), *left_sub_, *right_sub_);
-    sync_->registerCallback(boost::bind(&StereoNode::ImageCallback, this, _1, _2));
+    sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(10), *left_sub_, *right_sub_); // left and right camera sync
+    sync_->registerCallback(boost::bind(&StereoNode::ImageCallback, this, _1, _2)); // 同步接收图像1和图像2
 }
 
 
@@ -60,7 +60,7 @@ void StereoNode::ImageCallback (const sensor_msgs::ImageConstPtr& msgLeft, const
 
   current_frame_time_ = msgLeft->header.stamp;
 
-  orb_slam_->TrackStereo(cv_ptrLeft->image,cv_ptrRight->image,cv_ptrLeft->header.stamp.toSec());
+  orb_slam_->TrackStereo(cv_ptrLeft->image,cv_ptrRight->image,cv_ptrLeft->header.stamp.toSec());// 接收图像并进入ORBSLAM系统
 
   Update ();
 }

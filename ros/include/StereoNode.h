@@ -27,8 +27,8 @@ class StereoNode : public Node
 
 private:
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
-    message_filters::Subscriber<sensor_msgs::Image> *left_sub_;
-    message_filters::Subscriber<sensor_msgs::Image> *right_sub_;
+    message_filters::Subscriber<sensor_msgs::Image> *left_sub_; // 删除对象时需要记得用delete
+    message_filters::Subscriber<sensor_msgs::Image> *right_sub_; 
     message_filters::Synchronizer<sync_pol> *sync_;
 
 
