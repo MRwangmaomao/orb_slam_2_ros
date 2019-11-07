@@ -48,8 +48,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys),
     mpFrameDrawer(pFrameDrawer), mpMap(pMap), mnLastRelocFrameId(0), mnMinimumKeyFrames(5)
 {
-    // Load camera parameters from settings file
-
+    // Load camera parameters from settings file 
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
     float fx = fSettings["Camera.fx"];
     float fy = fSettings["Camera.fy"];
@@ -116,6 +115,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     int fIniThFAST = fSettings["ORBextractor.iniThFAST"];
     int fMinThFAST = fSettings["ORBextractor.minThFAST"];
 
+    // 创建左右目的ORB特征提取对象
     mpORBextractorLeft = new ORBextractor(nFeatures,fScaleFactor,nLevels,fIniThFAST,fMinThFAST);
 
     if(sensor==System::STEREO)
@@ -144,8 +144,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
             mDepthMapFactor=1;
         else
             mDepthMapFactor = 1.0f/mDepthMapFactor;
-    }
-
+    } 
 }
 
 void Tracking::SetLocalMapper(LocalMapping *pLocalMapper)
@@ -158,7 +157,40 @@ void Tracking::SetLoopClosing(LoopClosing *pLoopClosing)
     mpLoopClosing=pLoopClosing;
 }
 
-
+/**
+ * 
+ *  
+ *  
+ *  
+ *  
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+/**
+ * @brief 主要程序入口 1
+ * 
+ * @param imRectLeft 
+ * @param imRectRight 
+ * @param timestamp 
+ * @return cv::Mat 
+ * 
+ * 
+ * 
+ *    
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
 cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp)
 {
     mImGray = imRectLeft;
@@ -191,9 +223,10 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
         }
     }
 
+    // 左目图像 右目图像 时间戳 左目ORB提取 右目ORB提取 orb词典 帧 基线 深度
     mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
-    Track();
+    Track(); // 核心程序2
 
     return mCurrentFrame.mTcw.clone();
 }
@@ -259,11 +292,36 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
     return mCurrentFrame.mTcw.clone();
 }
 
+/**
+ * 1 未初始化状态
+ *      初始化双目
+ * 2 初始化成功状态
+ *      2.1 纯定位模式
+ *          2.1.1 跟踪运动关键帧
+ *          2.1.2 跟踪参考关键帧
+ *      2.2 非纯定位模式
+ *          2.2.1
+ *   
+ * 
+ * 
+ * 
+ * 
+ * @brief 核心程序2
+ * 
+ * 
+ * 
+ * 
+ *   
+ * 
+ * 
+ * 
+ * 
+ */
 void Tracking::Track()
 {
     if(mState==NO_IMAGES_YET)
     {
-        mState = NOT_INITIALIZED;
+        mState = NOT_INITIALIZED; // 未初始化
     }
 
     mLastProcessedState=mState;
@@ -271,10 +329,10 @@ void Tracking::Track()
     // Get Map Mutex -> Map cannot be changed
     unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
 
-    if(mState==NOT_INITIALIZED)
+    if(mState==NOT_INITIALIZED) // 未初始化
     {
         if(mSensor==System::STEREO || mSensor==System::RGBD)
-            StereoInitialization();
+            StereoInitialization(); // 2.1 双目初始化
         else
             MonocularInitialization();
 
@@ -283,14 +341,16 @@ void Tracking::Track()
         if(mState!=OK)
             return;
     }
-    else
+    else // 已初始化
     {
         // System is initialized. Track Frame.
         bool bOK;
-
+        /****************************************** part 1*************************************************/
         // Initial camera pose estimation using motion model or relocalization (if tracking is lost)
-        if(!mbOnlyTracking)
+        /****************************************** part 1*************************************************/
+         if(!mbOnlyTracking) 
         {
+            // 策略： 优先运动模型，然后关键帧，重定位
             // Local Mapping is activated. This is the normal behaviour, unless
             // you explicitly activate the "only tracking" mode.
 
@@ -301,13 +361,13 @@ void Tracking::Track()
 
                 if(mVelocity.empty() || mCurrentFrame.mnId<mnLastRelocFrameId+2)
                 {
-                    bOK = TrackReferenceKeyFrame();
+                    bOK = TrackReferenceKeyFrame(); 
                 }
                 else
                 {
-                    bOK = TrackWithMotionModel();
+                    bOK = TrackWithMotionModel(); // 基于运动模型跟踪关键帧
                     if(!bOK)
-                        bOK = TrackReferenceKeyFrame();
+                        bOK = TrackReferenceKeyFrame(); // 基于参考关键帧跟踪
                 }
             }
             else
@@ -315,30 +375,31 @@ void Tracking::Track()
                 bOK = Relocalization();
             }
         }
-        else
+ 
+        else // 纯定位
         {
             // Localization Mode: Local Mapping is deactivated
-
+            // 丢失的话重定位，否则直接进行运动模型的跟踪或者参考关键帧的跟踪
             if(mState==LOST)
             {
-                bOK = Relocalization();
+                bOK = Relocalization(); // 直接重定位
             }
             else
             {
-                if(!mbVO)
+                if(!mbVO) //  上一帧跟踪正常 采用基于模型或速度的方法
                 {
                     // In last frame we tracked enough MapPoints in the map
 
-                    if(!mVelocity.empty())
+                    if(!mVelocity.empty()) 
                     {
-                        bOK = TrackWithMotionModel();
+                        bOK = TrackWithMotionModel(); // 基于运动模型的跟踪
                     }
                     else
                     {
-                        bOK = TrackReferenceKeyFrame();
+                        bOK = TrackReferenceKeyFrame(); // 基于参考关键帧的跟踪
                     }
                 }
-                else
+                else // 跟踪丢失 采用基于视觉里程计的方法
                 {
                     // In last frame we tracked mainly "visual odometry" points.
 
@@ -348,7 +409,7 @@ void Tracking::Track()
 
                     bool bOKMM = false;
                     bool bOKReloc = false;
-                    vector<MapPoint*> vpMPsMM;
+                    vector<MapPoint*> vpMPsMM; 
                     vector<bool> vbOutMM;
                     cv::Mat TcwMM;
                     if(!mVelocity.empty())
@@ -377,23 +438,26 @@ void Tracking::Track()
                             }
                         }
                     }
-                    else if(bOKReloc)
+                    else if(bOKReloc) // 重定位成功
                     {
                         mbVO = false;
                     }
 
-                    bOK = bOKReloc || bOKMM;
+                    bOK = bOKReloc || bOKMM; 
                 }
             }
         }
 
         mCurrentFrame.mpReferenceKF = mpReferenceKF;
 
+        /****************************************** part 2*************************************************/
         // If we have an initial estimation of the camera pose and matching. Track the local map.
+        // 初始化成功，跟踪局部地图
+        /****************************************** part 2*************************************************/
         if(!mbOnlyTracking)
         {
             if(bOK)
-                bOK = TrackLocalMap();
+                bOK = TrackLocalMap(); // 跟踪局部地图
         }
         else
         {
@@ -401,11 +465,12 @@ void Tracking::Track()
             // a local map and therefore we do not perform TrackLocalMap(). Once the system relocalizes
             // the camera we will use the local map again.
             if(bOK && !mbVO)
-                bOK = TrackLocalMap();
+                bOK = TrackLocalMap();  // 跟踪局部地图
         }
 
+        // 更新状态
         if(bOK)
-            mState = OK;
+            mState = OK;  
         else
             mState=LOST;
 
@@ -428,7 +493,7 @@ void Tracking::Track()
 
             //mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.mTcw);
 
-            // Clean VO matches
+            // Clean VO matches 清除VO匹配
             for(int i=0; i<mCurrentFrame.N; i++)
             {
                 MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
@@ -440,7 +505,7 @@ void Tracking::Track()
                     }
             }
 
-            // Delete temporal MapPoints
+            // Delete temporal MapPoints 删除临时地图点
             for(list<MapPoint*>::iterator lit = mlpTemporalPoints.begin(), lend =  mlpTemporalPoints.end(); lit!=lend; lit++)
             {
                 MapPoint* pMP = *lit;
@@ -449,8 +514,8 @@ void Tracking::Track()
             mlpTemporalPoints.clear();
 
             // Check if we need to insert a new keyframe
-            if(NeedNewKeyFrame())
-                CreateNewKeyFrame();
+            if(NeedNewKeyFrame()) 
+                CreateNewKeyFrame(); // 创建一个关键帧
 
             // We allow points with high innovation (considererd outliers by the Huber Function)
             // pass to the new keyframe, so that bundle adjustment will finally decide
@@ -477,17 +542,17 @@ void Tracking::Track()
         if(!mCurrentFrame.mpReferenceKF)
             mCurrentFrame.mpReferenceKF = mpReferenceKF;
 
-        mLastFrame = Frame(mCurrentFrame);
+        mLastFrame = Frame(mCurrentFrame); 
     }
 
     // Store frame pose information to retrieve the complete camera trajectory afterwards.
     if(!mCurrentFrame.mTcw.empty())
     {
-        cv::Mat Tcr = mCurrentFrame.mTcw*mCurrentFrame.mpReferenceKF->GetPoseInverse();
+        cv::Mat Tcr = mCurrentFrame.mTcw*mCurrentFrame.mpReferenceKF->GetPoseInverse(); // 参考关键帧的相对位姿
         mlRelativeFramePoses.push_back(Tcr);
         mlpReferences.push_back(mpReferenceKF);
         mlFrameTimes.push_back(mCurrentFrame.mTimeStamp);
-        mlbLost.push_back(mState==LOST);
+        mlbLost.push_back(mState==LOST); // 是否为跟踪丢失状态
     }
     else
     {
@@ -500,43 +565,47 @@ void Tracking::Track()
 
 }
 
-
+/**
+ * @brief 双目初始化
+ * 
+ */
 void Tracking::StereoInitialization()
 {
-    if(mCurrentFrame.N>500)
+    if(mCurrentFrame.N>500) // 特征点大于500
     {
         // Set Frame pose to the origin
-        mCurrentFrame.SetPose(cv::Mat::eye(4,4,CV_32F));
+        mCurrentFrame.SetPose(cv::Mat::eye(4,4,CV_32F)); 
 
         // Create KeyFrame
-        KeyFrame* pKFini = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
+        KeyFrame* pKFini = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB); // 创建一个关键帧
 
         // Insert KeyFrame in the map
-        mpMap->AddKeyFrame(pKFini);
+        mpMap->AddKeyFrame(pKFini); // 将关键帧插入地图中
 
         // Create MapPoints and asscoiate to KeyFrame
-        for(int i=0; i<mCurrentFrame.N;i++)
+        for(int i=0; i<mCurrentFrame.N;i++) // 关键帧中的点数量大小
         {
-            float z = mCurrentFrame.mvDepth[i];
+            float z = mCurrentFrame.mvDepth[i]; // 每个点的深度信息
             if(z>0)
             {
-                cv::Mat x3D = mCurrentFrame.UnprojectStereo(i);
-                MapPoint* pNewMP = new MapPoint(x3D,pKFini,mpMap);
-                pNewMP->AddObservation(pKFini,i);
-                pKFini->AddMapPoint(pNewMP,i);
-                pNewMP->ComputeDistinctiveDescriptors();
-                pNewMP->UpdateNormalAndDepth();
-                mpMap->AddMapPoint(pNewMP);
+                cv::Mat x3D = mCurrentFrame.UnprojectStereo(i); // 双目投影模型
+                MapPoint* pNewMP = new MapPoint(x3D,pKFini,mpMap); // 新建一个地图点
+                pNewMP->AddObservation(pKFini,i); // 添加观测
+                pKFini->AddMapPoint(pNewMP,i); // 关键帧添加地图点
+                pNewMP->ComputeDistinctiveDescriptors(); // 计算描述子
+                pNewMP->UpdateNormalAndDepth(); // 更新深度
+                mpMap->AddMapPoint(pNewMP); // 添加一个新的地图点到地图中
 
-                mCurrentFrame.mvpMapPoints[i]=pNewMP;
+                mCurrentFrame.mvpMapPoints[i]=pNewMP; 
             }
         }
 
-        cout << "New map created with " << mpMap->MapPointsInMap() << " points" << endl;
+        cout << "New map created with " << mpMap->MapPointsInMap() << " points" << endl; // 地图中的地图点
 
-        mpLocalMapper->InsertKeyFrame(pKFini);
+        mpLocalMapper->InsertKeyFrame(pKFini); // 插入关键帧
 
-        mLastFrame = Frame(mCurrentFrame);
+        // 更新上个关键帧
+        mLastFrame = Frame(mCurrentFrame); 
         mnLastKeyFrameId=mCurrentFrame.mnId;
         mpLastKeyFrame = pKFini;
 
@@ -545,7 +614,7 @@ void Tracking::StereoInitialization()
         mpReferenceKF = pKFini;
         mCurrentFrame.mpReferenceKF = pKFini;
 
-        mpMap->SetReferenceMapPoints(mvpLocalMapPoints);
+        mpMap->SetReferenceMapPoints(mvpLocalMapPoints); 
 
         mpMap->mvpKeyFrameOrigins.push_back(pKFini);
 
@@ -859,6 +928,12 @@ void Tracking::UpdateLastFrame()
     }
 }
 
+/**
+ * @brief 
+ * 
+ * @return true 
+ * @return false 
+ */
 bool Tracking::TrackWithMotionModel()
 {
     ORBmatcher matcher(0.9,true);

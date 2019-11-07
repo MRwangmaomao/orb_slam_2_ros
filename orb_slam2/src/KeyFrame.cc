@@ -28,6 +28,13 @@ namespace ORB_SLAM2
 
 long unsigned int KeyFrame::nNextId=0;
 
+/**
+ * @brief Construct a new Key Frame:: Key Frame object
+ * 
+ * @param F 
+ * @param pMap 
+ * @param pKFDB 
+ */
 KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     mnFrameId(F.mnId),  mTimeStamp(F.mTimeStamp), mnGridCols(FRAME_GRID_COLS), mnGridRows(FRAME_GRID_ROWS),
     mfGridElementWidthInv(F.mfGridElementWidthInv), mfGridElementHeightInv(F.mfGridElementHeightInv),
@@ -170,7 +177,12 @@ vector<KeyFrame*> KeyFrame::GetVectorCovisibleKeyFrames()
     unique_lock<mutex> lock(mMutexConnections);
     return mvpOrderedConnectedKeyFrames;
 }
-
+/**
+ * @brief 
+ * 
+ * @param N 
+ * @return vector<KeyFrame*> 
+ */
 vector<KeyFrame*> KeyFrame::GetBestCovisibilityKeyFrames(const int &N)
 {
     unique_lock<mutex> lock(mMutexConnections);

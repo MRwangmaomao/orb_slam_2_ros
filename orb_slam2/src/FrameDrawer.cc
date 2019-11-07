@@ -44,7 +44,7 @@ cv::Mat FrameDrawer::DrawFrame()
     vector<bool> vbVO, vbMap; // Tracked MapPoints in current frame
     int state; // Tracking state
 
-    //Copy variables within scoped mutex
+    // Copy variables within scoped mutex
     {
         unique_lock<mutex> lock(mMutex);
         state=mState;

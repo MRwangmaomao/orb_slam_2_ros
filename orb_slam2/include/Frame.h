@@ -158,7 +158,7 @@ public:
     // Keypoints are assigned to cells in a grid to reduce matching complexity when projecting MapPoints.
     static float mfGridElementWidthInv;
     static float mfGridElementHeightInv;
-    std::vector<std::size_t> mGrid[FRAME_GRID_COLS][FRAME_GRID_ROWS];
+    std::vector<std::size_t> mGrid[FRAME_GRID_COLS][FRAME_GRID_ROWS]; // size_t 一种用来记录大小的数据类型
 
     // Camera pose.
     cv::Mat mTcw;

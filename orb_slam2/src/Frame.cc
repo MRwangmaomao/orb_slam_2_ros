@@ -26,9 +26,9 @@
 namespace ORB_SLAM2
 {
 
-long unsigned int Frame::nNextId=0;
-bool Frame::mbInitialComputations=true;
-float Frame::cx, Frame::cy, Frame::fx, Frame::fy, Frame::invfx, Frame::invfy;
+long unsigned int Frame::nNextId=0; // 全局变量？ frame ID 
+bool Frame::mbInitialComputations=true; // 初始化算子
+float Frame::cx, Frame::cy, Frame::fx, Frame::fy, Frame::invfx, Frame::invfy; // 
 float Frame::mnMinX, Frame::mnMinY, Frame::mnMaxX, Frame::mnMaxY;
 float Frame::mfGridElementWidthInv, Frame::mfGridElementHeightInv;
 
@@ -57,7 +57,20 @@ Frame::Frame(const Frame &frame)
         SetPose(frame.mTcw);
 }
 
-
+/**
+ * @brief Construct a new Frame:: Frame object 
+ * 
+ * @param imLeft 
+ * @param imRight 
+ * @param timeStamp 
+ * @param extractorLeft 
+ * @param extractorRight 
+ * @param voc 
+ * @param K 
+ * @param distCoef 
+ * @param bf 
+ * @param thDepth 
+ */
 Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
      mpReferenceKF(static_cast<KeyFrame*>(NULL))
@@ -75,22 +88,22 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
     // ORB extraction
-    thread threadLeft(&Frame::ExtractORB,this,0,imLeft);
-    thread threadRight(&Frame::ExtractORB,this,1,imRight);
+    thread threadLeft(&Frame::ExtractORB,this,0,imLeft); // 左目提取线程
+    thread threadRight(&Frame::ExtractORB,this,1,imRight); // 右目提取线程
     threadLeft.join();
     threadRight.join();
 
-    N = mvKeys.size();
+    N = mvKeys.size(); // 统计特征点数量
 
     if(mvKeys.empty())
         return;
 
-    UndistortKeyPoints();
+    UndistortKeyPoints(); // 去畸变
 
-    ComputeStereoMatches();
+    ComputeStereoMatches(); // 双目匹配，得到3D点
 
-    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));    
-    mvbOutlier = vector<bool>(N,false);
+    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));   // 当前帧看到的地图点
+    mvbOutlier = vector<bool>(N,false); //  
 
 
     // This is done only for the first Frame (or after a change in the calibration)
@@ -111,9 +124,9 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
         mbInitialComputations=false;
     }
 
-    mb = mbf/fx;
+    mb = mbf/fx; // baseline
 
-    AssignFeaturesToGrid();
+    AssignFeaturesToGrid(); // Assign keypoints to the grid for speed up feature matching (called in the constructor).
 }
 
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
@@ -227,12 +240,16 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     AssignFeaturesToGrid();
 }
 
+/**
+ * @brief 将特征点划分栅格
+ * 
+ */
 void Frame::AssignFeaturesToGrid()
 {
-    int nReserve = 0.5f*N/(FRAME_GRID_COLS*FRAME_GRID_ROWS);
-    for(unsigned int i=0; i<FRAME_GRID_COLS;i++)
+    int nReserve = 0.5f*N/(FRAME_GRID_COLS*FRAME_GRID_ROWS); // N × （64行 × 48列） 
+    for(unsigned int i=0; i<FRAME_GRID_COLS;i++) 
         for (unsigned int j=0; j<FRAME_GRID_ROWS;j++)
-            mGrid[i][j].reserve(nReserve);
+            mGrid[i][j].reserve(nReserve); // 分配 每个栅格可能分到的特征点大小的空间
 
     for(int i=0;i<N;i++)
     {
@@ -391,7 +408,10 @@ bool Frame::PosInGrid(const cv::KeyPoint &kp, int &posX, int &posY)
     return true;
 }
 
-
+/**
+ * @brief 计算词袋
+ * 
+ */
 void Frame::ComputeBoW()
 {
     if(mBowVec.empty())
@@ -401,9 +421,13 @@ void Frame::ComputeBoW()
     }
 }
 
+/**
+ * @brief 关键点 去除畸变
+ * 
+ */
 void Frame::UndistortKeyPoints()
 {
-    if(mDistCoef.at<float>(0)==0.0)
+    if(mDistCoef.at<float>(0)==0.0) // 是否存在畸变
     {
         mvKeysUn=mvKeys;
         return;
@@ -463,6 +487,10 @@ void Frame::ComputeImageBounds(const cv::Mat &imLeft)
     }
 }
 
+/**
+ * @brief 
+ * 
+ */
 void Frame::ComputeStereoMatches()
 {
     mvuRight = vector<float>(N,-1.0f);
@@ -663,6 +691,12 @@ void Frame::ComputeStereoFromRGBD(const cv::Mat &imDepth)
     }
 }
 
+/**
+ * @brief 
+ * 
+ * @param i 
+ * @return cv::Mat 
+ */
 cv::Mat Frame::UnprojectStereo(const int &i)
 {
     const float z = mvDepth[i];

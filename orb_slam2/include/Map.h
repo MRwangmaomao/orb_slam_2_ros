@@ -53,32 +53,32 @@ public:
     std::vector<MapPoint*> GetAllMapPoints();
     std::vector<MapPoint*> GetReferenceMapPoints();
 
-    long unsigned int MapPointsInMap();
-    long unsigned  KeyFramesInMap();
+    long unsigned int MapPointsInMap(); // 返回地图点数量
+    long unsigned  KeyFramesInMap(); // 返回关键帧数量
 
-    long unsigned int GetMaxKFid();
+    long unsigned int GetMaxKFid(); // 最大关键帧id
 
     void clear();
 
     vector<KeyFrame*> mvpKeyFrameOrigins;
 
-    std::mutex mMutexMapUpdate;
+    std::mutex mMutexMapUpdate; 
 
     // This avoid that two points are created simultaneously in separate threads (id conflict)
     std::mutex mMutexPointCreation;
 
 protected:
-    std::set<MapPoint*> mspMapPoints;
-    std::set<KeyFrame*> mspKeyFrames;
+    std::set<MapPoint*> mspMapPoints; // 地图点 用set集合表示
+    std::set<KeyFrame*> mspKeyFrames; // 关键帧 
 
-    std::vector<MapPoint*> mvpReferenceMapPoints;
+    std::vector<MapPoint*> mvpReferenceMapPoints; 
 
-    long unsigned int mnMaxKFid;
+    long unsigned int mnMaxKFid; 
 
     // Index related to a big change in the map (loop closure, global BA)
-    int mnBigChangeIdx;
+    int mnBigChangeIdx; // 回环检测时相关的ID索引
 
-    std::mutex mMutexMap;
+    std::mutex mMutexMap; // 地图锁
 
 // map serialization addition
 private:

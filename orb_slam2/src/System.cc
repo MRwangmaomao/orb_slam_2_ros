@@ -97,7 +97,7 @@ System::System(const string strVocFile, const string strSettingsFile, const eSen
     if (load_map && LoadMap(map_file)) {
         std::cout << "Using loaded map with " << mpMap->MapPointsInMap() << " points\n" << std::endl;
     }
-    else {
+    else { // 创建关键帧数据库，基于orb词典，创建地图
         //Create KeyFrame Database
         mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary); // 关键帧数据库
         //Create the Map
@@ -134,6 +134,13 @@ System::System(const string strVocFile, const string strSettingsFile, const eSen
     currently_localizing_only_ = false; // 非纯定位模式
 }
 
+/**
+ * @brief 当接收到Stereo图像时开始执行一次，在主程序的消息回调函数中被调用
+ * 
+ * @param imLeft 
+ * @param imRight 
+ * @param timestamp 
+ */
 void System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp)
 {
     if(mSensor!=STEREO)
@@ -145,7 +152,7 @@ void System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const do
     // Check mode change
     {
         unique_lock<mutex> lock(mMutexMode);
-        if(mbActivateLocalizationMode)
+        if(mbActivateLocalizationMode) // 纯定位模式
         {
             mpLocalMapper->RequestStop();
 
@@ -158,7 +165,7 @@ void System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const do
             mpTracker->InformOnlyTracking(true);
             mbActivateLocalizationMode = false;
         }
-        if(mbDeactivateLocalizationMode)
+        if(mbDeactivateLocalizationMode) // 非纯定位
         {
             mpTracker->InformOnlyTracking(false);
             mpLocalMapper->Release();
@@ -176,13 +183,21 @@ void System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const do
     }
     }
 
-    cv::Mat Tcw = mpTracker->GrabImageStereo(imLeft,imRight,timestamp);
+    /*********************************************************************************************
+     ********************************************************************************************* 
+     ********************************************************************************************* 
+                                        主要程序入口 计算位姿，更新地图
+     *********************************************************************************************
+     *********************************************************************************************
+    *********************************************************************************************/
+    cv::Mat Tcw = mpTracker->GrabImageStereo(imLeft,imRight,timestamp); // mpTracker线程的方法
 
+    // 读取当前状态
     unique_lock<mutex> lock2(mMutexState);
-    mTrackingState = mpTracker->mState;
-    mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
-    mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
-    current_position_ = Tcw;
+    mTrackingState = mpTracker->mState; // 当前跟踪状态
+    mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints; // 当前地图点
+    mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;// 当前关键帧是否需要去掉？
+    current_position_ = Tcw;// 更新当前位置
 }
 
 void System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
@@ -612,6 +627,7 @@ bool System::SaveMap(const string &filename) {
         return false;
     }
 
+    // 将地图，关键帧数据库加入到oa中
     try {
         std::cout << "saving map file: " << map_file << std::flush;
         boost::archive::binary_oarchive oa(out, boost::archive::no_header);

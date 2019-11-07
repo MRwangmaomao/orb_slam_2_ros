@@ -60,7 +60,7 @@ void StereoNode::ImageCallback (const sensor_msgs::ImageConstPtr& msgLeft, const
 
   current_frame_time_ = msgLeft->header.stamp;
 
-  orb_slam_->TrackStereo(cv_ptrLeft->image,cv_ptrRight->image,cv_ptrLeft->header.stamp.toSec());// 接收图像并进入ORBSLAM系统
+  orb_slam_->TrackStereo(cv_ptrLeft->image,cv_ptrRight->image,cv_ptrLeft->header.stamp.toSec());// 接收图像并进入ORBSLAM系统,继承父亲类的orb_slam_
 
   Update ();
 }
