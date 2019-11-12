@@ -942,6 +942,7 @@ bool Tracking::TrackWithMotionModel()
     // Create "visual odometry" points if in Localization Mode
     UpdateLastFrame();
 
+    // 计算相机位姿
     mCurrentFrame.SetPose(mVelocity*mLastFrame.mTcw);
 
     fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
@@ -954,6 +955,7 @@ bool Tracking::TrackWithMotionModel()
         th=7;
     int nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,th,mSensor==System::MONOCULAR);
 
+    // 如果通过足够的有效数据找相机位姿
     // If few matches, uses a wider window search
     if(nmatches<20)
     {
@@ -997,6 +999,12 @@ bool Tracking::TrackWithMotionModel()
     return nmatchesMap>=10;
 }
 
+/**
+ * @brief 局部地图追踪
+ * 
+ * @return true 
+ * @return false 
+ */
 bool Tracking::TrackLocalMap()
 {
     // We have an estimation of the camera pose and some map points tracked in the frame.
@@ -1004,6 +1012,8 @@ bool Tracking::TrackLocalMap()
 
     UpdateLocalMap();
 
+
+    // 搜索更多地图点云
     SearchLocalPoints();
 
     // Optimize Pose

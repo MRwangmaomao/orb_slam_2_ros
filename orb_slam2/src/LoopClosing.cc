@@ -40,7 +40,7 @@ LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, 
     mpKeyFrameDB(pDB), mpORBVocabulary(pVoc), mpMatchedKF(NULL), mLastLoopKFid(0), mbRunningGBA(false), mbFinishedGBA(true),
     mbStopGBA(false), mpThreadGBA(NULL), mbFixScale(bFixScale), mnFullBAIdx(false)
 {
-    mnCovisibilityConsistencyTh = 3;
+    mnCovisibilityConsistencyTh = 3; // 设置有连续3个图像与当前关键帧相似时认为这个关键帧是回环
 }
 
 void LoopClosing::SetTracker(Tracking *pTracker)
@@ -61,27 +61,27 @@ void LoopClosing::Run()
     while(1)
     {
         // Check if there are keyframes in the queue
-        if(CheckNewKeyFrames())
+        if(CheckNewKeyFrames()) // 收到新的关键帧
         {
             // Detect loop candidates and check covisibility consistency
-            if(DetectLoop())
+            if(DetectLoop()) // 判断回环
             {
                // Compute similarity transformation [sR|t]
                // In the stereo/RGBD case s=1
-               if(ComputeSim3())
+               if(ComputeSim3()) // 计算sim3
                {
                    // Perform loop fusion and pose graph optimization
-                   CorrectLoop();
+                   CorrectLoop(); // 回环校正
                }
             }
         }
 
-        ResetIfRequested();
+        ResetIfRequested(); 
 
         if(CheckFinish())
             break;
 
-        std::this_thread::sleep_for(std::chrono::microseconds(5000));
+        std::this_thread::sleep_for(std::chrono::microseconds(5000)); // 暂停5秒钟
     }
 
     SetFinish();
@@ -100,6 +100,12 @@ bool LoopClosing::CheckNewKeyFrames()
     return(!mlpLoopKeyFrameQueue.empty());
 }
 
+/**
+ * @brief 回环检测
+ * 
+ * @return true 
+ * @return false 
+ */
 bool LoopClosing::DetectLoop()
 {
     {
@@ -117,7 +123,7 @@ bool LoopClosing::DetectLoop()
         mpCurrentKF->SetErase();
         return false;
     }
-
+    // 先计算Bow向量，找到视图相关的所有邻近图像，计算相似度，保留最低分
     // Compute reference BoW similarity score
     // This is the lowest score to a connected keyframe in the covisibility graph
     // We will impose loop candidates to have a higher similarity than this
@@ -137,6 +143,7 @@ bool LoopClosing::DetectLoop()
             minScore = score;
     }
 
+    // 检索图像识别数据库，丢掉分值低于Smin的关键帧
     // Query the database imposing the minimum score
     vector<KeyFrame*> vpCandidateKFs = mpKeyFrameDB->DetectLoopCandidates(mpCurrentKF, minScore);
 
@@ -149,6 +156,7 @@ bool LoopClosing::DetectLoop()
         return false;
     }
 
+    // 必须检测到3个一个的回环（内容相关的关键帧）
     // For each loop candidate check consistency with previous loop candidates
     // Each candidate expands a covisibility group (keyframes connected to the loop candidate in the covisibility graph)
     // A group is consistent with a previous group if they share at least a keyframe
@@ -228,12 +236,19 @@ bool LoopClosing::DetectLoop()
     return false;
 }
 
+/**
+ * @brief 计算相似度  单目slam有7个自由度，3个平移，3个旋转，1个尺度，闭环需要计算从当前关键帧Ki到回环关键帧Ki的相似变换，以获得回环的累计误差
+ * 
+ * @return true 
+ * @return false 
+ */
 bool LoopClosing::ComputeSim3()
 {
     // For each consistent loop candidate we try to compute a Sim3
 
     const int nInitialCandidates = mvpEnoughConsistentCandidates.size();
 
+    // 先计算ORB特征关联的当前关键帧的地图点云和回环候选关键帧的对应关系
     // We compute first ORB matches for each candidate
     // If enough matches are found, we setup a Sim3Solver
     ORBmatcher matcher(0.75,true);
@@ -399,6 +414,10 @@ bool LoopClosing::ComputeSim3()
 
 }
 
+/**
+ * @brief 闭环校正
+ * 
+ */
 void LoopClosing::CorrectLoop()
 {
     cout << "Loop detected!" << endl;
@@ -536,12 +555,14 @@ void LoopClosing::CorrectLoop()
 
     }
 
+    // 所有匹配的地图点云和计算sim
     // Project MapPoints observed in the neighborhood of the loop keyframe
     // into the current keyframe and neighbors using corrected poses.
     // Fuse duplications.
     SearchAndFuse(CorrectedSim3);
 
 
+    // 融合过程中所有的关键帧将会更新他们的边缘
     // After the MapPoint fusion, new links in the covisibility graph will appear attaching both sides of the loop
     map<KeyFrame*, set<KeyFrame*> > LoopConnections;
 
@@ -642,6 +663,11 @@ void LoopClosing::ResetIfRequested()
     }
 }
 
+/**
+ * @brief 运行全局BA
+ * 
+ * @param nLoopKF 
+ */
 void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF)
 {
     cout << "Starting Global Bundle Adjustment" << endl;

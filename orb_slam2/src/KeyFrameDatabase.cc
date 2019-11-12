@@ -36,7 +36,11 @@ KeyFrameDatabase::KeyFrameDatabase (const ORBVocabulary &voc):
     mvInvertedFile.resize(voc.size());
 }
 
-
+/**
+ * @brief 将候选关键帧插入到关键帧数据库中
+ * 
+ * @param pKF 关键帧
+ */
 void KeyFrameDatabase::add(KeyFrame *pKF)
 {
     unique_lock<mutex> lock(mMutex);
@@ -72,7 +76,13 @@ void KeyFrameDatabase::clear()
     mvInvertedFile.resize(mpVoc->size());
 }
 
-
+/**
+ * @brief 检测回环候选关键帧
+ * 
+ * @param pKF 
+ * @param minScore 
+ * @return vector<KeyFrame*> 
+ */
 vector<KeyFrame*> KeyFrameDatabase::DetectLoopCandidates(KeyFrame* pKF, float minScore)
 {
     set<KeyFrame*> spConnectedKeyFrames = pKF->GetConnectedKeyFrames();
@@ -196,6 +206,12 @@ vector<KeyFrame*> KeyFrameDatabase::DetectLoopCandidates(KeyFrame* pKF, float mi
     return vpLoopCandidates;
 }
 
+/**
+ * @brief 重定位候选关键帧
+ * 
+ * @param F 
+ * @return vector<KeyFrame*> 
+ */
 vector<KeyFrame*> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F)
 {
     list<KeyFrame*> lKFsSharingWords;

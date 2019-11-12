@@ -55,33 +55,33 @@ void LocalMapping::Run()
         SetAcceptKeyFrames(false);
 
         // Check if there are keyframes in the queue
-        if(CheckNewKeyFrames())
+        if(CheckNewKeyFrames()) // 如果检测当前帧为关键帧
         {
             // BoW conversion and insertion in Map
             ProcessNewKeyFrame();
 
             // Check recent MapPoints
-            MapPointCulling();
+            MapPointCulling(); // 检测地图点云
 
             // Triangulate new MapPoints
-            CreateNewMapPoints();
+            CreateNewMapPoints(); // 创建新的地图点云
 
-            if(!CheckNewKeyFrames())
+            if(!CheckNewKeyFrames()) // 检测新的关键帧
             {
                 // Find more matches in neighbor keyframes and fuse point duplications
-                SearchInNeighbors();
+                SearchInNeighbors(); // 在近邻中搜索
             }
 
             mbAbortBA = false;
 
-            if(!CheckNewKeyFrames() && !stopRequested())
+            if(!CheckNewKeyFrames() && !stopRequested()) // 检查为新的关键帧或者停止请求
             {
                 // Local BA
-                if(mpMap->KeyFramesInMap()>2)
-                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpMap);
+                if(mpMap->KeyFramesInMap()>2) // 局部BA
+                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpMap); // 优化BA
 
-                // Check redundant local Keyframes
-                KeyFrameCulling();
+                // Check redundant local Keyframes 去除多余的关键帧
+                KeyFrameCulling(); // 关键帧去除
             }
 
             mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
