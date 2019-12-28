@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+
+
 Node::Node (ORB_SLAM2::System::eSensor sensor, ros::NodeHandle &node_handle, image_transport::ImageTransport &image_transport) {
   name_of_node_ = ros::this_node::getName();
   node_handle_ = node_handle;
@@ -186,7 +188,7 @@ sensor_msgs::PointCloud2 Node::MapPointsToPointCloud (std::vector<ORB_SLAM2::Map
 	unsigned char *cloud_data_ptr = &(cloud.data[0]);
 
   float data_array[num_channels];
-  for (unsigned int i=0; i<cloud.width; i++) {
+  for(unsigned int i=0; i<cloud.width; i++) {
     if (map_points.at(i)->nObs >= min_observations_per_point_) {
       data_array[0] = map_points.at(i)->GetWorldPos().at<float> (2); //x. Do the transformation by just reading at the position of z instead of x
       data_array[1] = -1.0* map_points.at(i)->GetWorldPos().at<float> (0); //y. Do the transformation by just reading at the position of x instead of y
